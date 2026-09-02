@@ -25,8 +25,9 @@ type DatabaseConfig struct {
 }
 
 type ServerConfig struct {
-	Port string
-	Env  string
+	Port          string
+	Env           string
+	AllowedOrigin string
 }
 
 type JWTConfig struct {
@@ -47,29 +48,38 @@ func LoadConfig() (*Config, error) {
 		log.Println("No .env file found, using environment variables")
 	}
 
-	expireHours, _ := strconv.Atoi(getEnv("JWT_EXPIRE_HOURS", "24"))
-	maxFileSize, _ := strconv.ParseInt(getEnv("MAX_FILE_SIZE", "5242880"), 10, 64)
+	expireHours, _ := strconv.Atoi(GetEnv("JWT_EXPIRE_HOURS", "24"))
+	maxFileSize, _ := strconv.ParseInt(GetEnv("MAX_FILE_SIZE", "5242880"), 10, 64)
 
 	config := &Config{
 		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "3306"),
-			User:     getEnv("DB_USER", "root"),
-			Password: getEnv("DB_PASSWORD", ""),
-			DBName:   getEnv("DB_NAME", "pengaduan_db"),
+			Host:     GetEnv("DB_HOST", "localhost"),
+			Port:     GetEnv("DB_PORT", "3306"),
+			User:     GetEnv("DB_USER", "root"),
+			Password: GetEnv("DB_PASSWORD", ""),
+			DBName:   GetEnv("DB_NAME", "pengaduan_db"),
 		},
 		Server: ServerConfig{
-			Port: getEnv("PORT", "8080"),
-			Env:  getEnv("ENV", "development"),
+			Port:          GetEnv("PORT", "8080"),
+			Env:           GetEnv("ENV", "development"),
+			AllowedOrigin: GetEnv("ALLOWED_ORIGIN", "http://localhost:3000"),
 		},
 		JWT: JWTConfig{
-			Secret:      getEnv("JWT_SECRET", "default-secret-key"),
+			Secret:      GetEnv("JWT_SECRET", "default-secret-key"),
 			ExpireHours: expireHours,
 		},
 		Upload: UploadConfig{
-			Path:        getEnv("UPLOAD_PATH", "./uploads"),
+			Path:        GetEnv("UPLOAD_PATH", "./uploads"),
 			MaxFileSize: maxFileSize,
 		},
+	}
+
+	// Security validation for JWT secret
+	if config.Server.Env == "production" && (config.JWT.Secret == "" || config.JWT.Secret == "default-secret-key") {
+		return nil, fmt.Errorf("FATAL: JWT_SECRET must be explicitly configured in production environment")
+	}
+	if config.JWT.Secret == "default-secret-key" {
+		log.Println("WARNING: Using default JWT secret. Please set a secure JWT_SECRET in .env for production.")
 	}
 
 	AppConfig = config
@@ -81,7 +91,8 @@ func (c *DatabaseConfig) GetDSN() string {
 		c.User, c.Password, c.Host, c.Port, c.DBName)
 }
 
-func getEnv(key, defaultValue string) string {
+// GetEnv retrieves environment variable or fallback to default value
+func GetEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}

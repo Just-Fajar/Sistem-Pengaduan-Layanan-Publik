@@ -99,14 +99,16 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Demo credentials */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-xs font-semibold text-gray-700 mb-2">Demo Login:</p>
-          <div className="text-xs text-gray-600 space-y-1">
-            <p><strong>Admin:</strong> admin@example.com / password123</p>
-            <p><strong>User:</strong> john@example.com / password123</p>
+        {/* Demo credentials (development only) */}
+        {import.meta.env.DEV && (
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <p className="text-xs font-semibold text-gray-700 mb-2">Demo Login (Development Only):</p>
+            <div className="text-xs text-gray-600 space-y-1">
+              <p><strong>Admin:</strong> admin@example.com / password123</p>
+              <p><strong>User:</strong> john@example.com / password123</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
