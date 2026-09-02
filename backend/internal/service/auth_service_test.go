@@ -109,3 +109,48 @@ func TestCategoryService_CRUD(t *testing.T) {
 	_, err = categoryService.GetCategoryDetail(cat.ID)
 	assert.Error(t, err)
 }
+
+func TestAuthService_ForgotPasswordAndReset(t *testing.T) {
+	db := setupTestDB(t)
+	userRepo := repository.NewUserRepository(db)
+	authService := service.NewAuthService(userRepo)
+
+	// Register user
+	regReq := models.UserRegisterRequest{
+		Name:     "Rina",
+		Email:    "rina@example.com",
+		Password: "oldpassword123",
+		Phone:    "081234567890",
+	}
+	_, _, err := authService.Register(&regReq)
+	assert.NoError(t, err)
+
+	// Request Forgot Password
+	token, err := authService.ForgotPassword("rina@example.com")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, token)
+
+	// Reset with invalid token
+	err = authService.ResetPassword("invalid-token", "newpassword123")
+	assert.Error(t, err)
+
+	// Reset with valid token
+	err = authService.ResetPassword(token, "newpassword123")
+	assert.NoError(t, err)
+
+	// Verify old password fails
+	_, _, err = authService.Login(&models.UserLoginRequest{
+		Email:    "rina@example.com",
+		Password: "oldpassword123",
+	})
+	assert.Error(t, err)
+
+	// Verify new password succeeds
+	loginRes, loginToken, err := authService.Login(&models.UserLoginRequest{
+		Email:    "rina@example.com",
+		Password: "newpassword123",
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, loginRes)
+	assert.NotEmpty(t, loginToken)
+}

@@ -98,3 +98,50 @@ func TestAuthHandler_Login(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, wBad.Code)
 }
+
+func TestAuthHandler_ForgotPasswordAndReset(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := testutil.SetupTestDB(t)
+
+	user, _ := testutil.CreateTestUser(t, db, "user")
+
+	userRepo := repository.NewUserRepository(db)
+	authService := service.NewAuthService(userRepo)
+	authHandler := handlers.NewAuthHandler(authService)
+
+	r := gin.New()
+	r.POST("/api/auth/forgot-password", authHandler.ForgotPassword)
+	r.POST("/api/auth/reset-password", authHandler.ResetPassword)
+
+	// 1. Request Forgot Password
+	forgotReq := models.ForgotPasswordRequest{Email: user.Email}
+	bodyBytes, _ := json.Marshal(forgotReq)
+	reqForgot, _ := http.NewRequest(http.MethodPost, "/api/auth/forgot-password", bytes.NewBuffer(bodyBytes))
+	reqForgot.Header.Set("Content-Type", "application/json")
+	wForgot := httptest.NewRecorder()
+	r.ServeHTTP(wForgot, reqForgot)
+
+	assert.Equal(t, http.StatusOK, wForgot.Code)
+	var resForgot utils.Response
+	err := json.Unmarshal(wForgot.Body.Bytes(), &resForgot)
+	assert.NoError(t, err)
+
+	dataMap, ok := resForgot.Data.(map[string]interface{})
+	assert.True(t, ok)
+	token, ok := dataMap["token"].(string)
+	assert.True(t, ok)
+	assert.NotEmpty(t, token)
+
+	// 2. Reset Password with token
+	resetReq := models.ResetPasswordRequest{
+		Token:       token,
+		NewPassword: "newpassword123",
+	}
+	resetBytes, _ := json.Marshal(resetReq)
+	reqReset, _ := http.NewRequest(http.MethodPost, "/api/auth/reset-password", bytes.NewBuffer(resetBytes))
+	reqReset.Header.Set("Content-Type", "application/json")
+	wReset := httptest.NewRecorder()
+	r.ServeHTTP(wReset, reqReset)
+
+	assert.Equal(t, http.StatusOK, wReset.Code)
+}

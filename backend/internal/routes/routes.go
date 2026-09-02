@@ -48,6 +48,8 @@ func SetupRoutes(router *gin.Engine, db ...*gorm.DB) {
 		{
 			auth.POST("/register", middleware.AuthRateLimiter(), authHandler.Register)
 			auth.POST("/login", middleware.AuthRateLimiter(), authHandler.Login)
+			auth.POST("/forgot-password", middleware.AuthRateLimiter(), authHandler.ForgotPassword)
+			auth.POST("/reset-password", middleware.AuthRateLimiter(), authHandler.ResetPassword)
 		}
 
 		// Protected routes - require authentication

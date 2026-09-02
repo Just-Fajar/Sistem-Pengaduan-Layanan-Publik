@@ -12,11 +12,13 @@ type User struct {
 	Name      string         `gorm:"type:varchar(100);not null" json:"name" binding:"required"`
 	Email     string         `gorm:"type:varchar(100);unique;not null" json:"email" binding:"required,email"`
 	Password  string         `gorm:"type:varchar(255);not null" json:"-"`
-	Phone     string         `gorm:"type:varchar(20)" json:"phone"`
-	Role      string         `gorm:"type:varchar(20);default:'user'" json:"role"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	Phone                  string         `gorm:"type:varchar(20)" json:"phone"`
+	Role                   string         `gorm:"type:varchar(20);default:'user'" json:"role"`
+	ResetPasswordToken     *string        `gorm:"type:varchar(255);index" json:"-"`
+	ResetPasswordExpiresAt *time.Time     `json:"-"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	DeletedAt              gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relations
 	Complaints []Complaint `gorm:"foreignKey:UserID" json:"complaints,omitempty"`
@@ -33,6 +35,15 @@ type UserRegisterRequest struct {
 type UserLoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
+}
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type ResetPasswordRequest struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
 }
 
 type UpdateProfileRequest struct {

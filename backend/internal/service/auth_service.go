@@ -4,13 +4,18 @@ import (
 	"backend/internal/models"
 	"backend/internal/repository"
 	"backend/internal/utils"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"time"
 )
 
 type AuthService interface {
 	Register(req *models.UserRegisterRequest) (*models.UserResponse, string, error)
 	Login(req *models.UserLoginRequest) (*models.UserResponse, string, error)
 	GetProfile(userID uint) (*models.UserResponse, error)
+	ForgotPassword(email string) (string, error)
+	ResetPassword(token string, newPassword string) error
 }
 
 type authService struct {
@@ -77,4 +82,49 @@ func (s *authService) GetProfile(userID uint) (*models.UserResponse, error) {
 	}
 	res := user.ToUserResponse()
 	return &res, nil
+}
+
+func (s *authService) ForgotPassword(email string) (string, error) {
+	user, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		return "", errors.New("Akun dengan email tersebut tidak ditemukan")
+	}
+
+	// Generate secure 32-byte hex token
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	resetToken := hex.EncodeToString(bytes)
+	expiresAt := time.Now().Add(1 * time.Hour)
+
+	user.ResetPasswordToken = &resetToken
+	user.ResetPasswordExpiresAt = &expiresAt
+
+	if err := s.userRepo.Update(user); err != nil {
+		return "", err
+	}
+
+	return resetToken, nil
+}
+
+func (s *authService) ResetPassword(token string, newPassword string) error {
+	user, err := s.userRepo.FindByResetToken(token)
+	if err != nil {
+		return errors.New("Token reset password tidak valid atau sudah digunakan")
+	}
+
+	if user.ResetPasswordExpiresAt == nil || time.Now().After(*user.ResetPasswordExpiresAt) {
+		return errors.New("Token reset password sudah kadaluarsa")
+	}
+
+	if err := user.HashPassword(newPassword); err != nil {
+		return err
+	}
+
+	// Clear reset token after successful reset
+	user.ResetPasswordToken = nil
+	user.ResetPasswordExpiresAt = nil
+
+	return s.userRepo.Update(user)
 }

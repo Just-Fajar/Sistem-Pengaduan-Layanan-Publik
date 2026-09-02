@@ -87,3 +87,42 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 
 	utils.SuccessResponse(c, http.StatusOK, "Profile retrieved successfully", user)
 }
+
+// ForgotPassword handles sending reset password token
+// POST /api/v1/auth/forgot-password
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req models.ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, err.Error())
+		return
+	}
+
+	token, err := h.authService.ForgotPassword(req.Email)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	// In local/development, we provide the reset token in the response payload for easy testing
+	utils.SuccessResponse(c, http.StatusOK, "Tautan reset password berhasil dibuat", gin.H{
+		"message": "Silakan gunakan tautan atau token ini untuk mereset kata sandi",
+		"token":   token,
+	})
+}
+
+// ResetPassword handles resetting password with token
+// POST /api/v1/auth/reset-password
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req models.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, err.Error())
+		return
+	}
+
+	if err := h.authService.ResetPassword(req.Token, req.NewPassword); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Kata sandi berhasil diperbarui. Silakan login kembali.", nil)
+}
