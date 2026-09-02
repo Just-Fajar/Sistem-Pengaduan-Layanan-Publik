@@ -22,3 +22,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Documentation (ignore all .md files except README)
+*.md
+**/*.md
+!README.md
+!README*.md
+!**/README.md
+!**/README*.md
