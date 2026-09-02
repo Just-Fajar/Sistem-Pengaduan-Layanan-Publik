@@ -220,52 +220,14 @@ const AdminComplaints = () => {
               />
             </div>
           </div>
-        </div>
-              />
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FiFilter className="inline mr-1" /> Status
-              </label>
-              <select
-                value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="input"
-              >
-                <option value="">Semua Status</option>
-                <option value="pending">Menunggu</option>
-                <option value="processing">Diproses</option>
-                <option value="completed">Selesai</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FiFilter className="inline mr-1" /> Kategori
-              </label>
-              <select
-                value={filters.category_id}
-                onChange={(e) => handleFilterChange('category_id', e.target.value)}
-                className="input"
-              >
-                <option value="">Semua Kategori</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-end">
-              <button
-                onClick={() => setFilters({ status: '', category_id: '', search: '' })}
-                className="btn btn-outline w-full"
-              >
-                Reset Filter
-              </button>
-            </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => setFilters({ status: '', category_id: '', search: '', date_from: '', date_to: '' })}
+              className="btn btn-outline"
+            >
+              Reset Filter
+            </button>
           </div>
         </div>
 
