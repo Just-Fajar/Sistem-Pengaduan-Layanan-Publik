@@ -21,7 +21,7 @@ type Complaint struct {
 	Title       string          `gorm:"type:varchar(200);not null" json:"title"`
 	Description string          `gorm:"type:text;not null" json:"description"`
 	PhotoURL    string          `gorm:"type:varchar(255)" json:"photo_url"`
-	Status      ComplaintStatus `gorm:"type:enum('pending','processing','completed');default:'pending'" json:"status"`
+	Status      ComplaintStatus `gorm:"type:varchar(20);default:'pending'" json:"status"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt  `gorm:"index" json:"-"`

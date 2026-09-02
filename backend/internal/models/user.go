@@ -13,7 +13,7 @@ type User struct {
 	Email     string         `gorm:"type:varchar(100);unique;not null" json:"email" binding:"required,email"`
 	Password  string         `gorm:"type:varchar(255);not null" json:"-"`
 	Phone     string         `gorm:"type:varchar(20)" json:"phone"`
-	Role      string         `gorm:"type:enum('user','admin');default:'user'" json:"role"`
+	Role      string         `gorm:"type:varchar(20);default:'user'" json:"role"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

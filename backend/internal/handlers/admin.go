@@ -187,15 +187,22 @@ func (h *AdminHandler) AddResponse(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusCreated, "Response added successfully", response.ToResponseItem())
 }
 
+// CategoryStat represents complaint count per category
+type CategoryStat struct {
+	CategoryName string `json:"category_name"`
+	Total        int64  `json:"total"`
+}
+
 // GetDashboardStats gets dashboard statistics
 // GET /api/admin/statistics
 func (h *AdminHandler) GetDashboardStats(c *gin.Context) {
 	var stats struct {
-		TotalComplaints     int64 `json:"total_complaints"`
-		PendingComplaints   int64 `json:"pending_complaints"`
-		ProcessingComplaints int64 `json:"processing_complaints"`
-		CompletedComplaints int64 `json:"completed_complaints"`
-		TotalUsers          int64 `json:"total_users"`
+		TotalComplaints      int64          `json:"total_complaints"`
+		PendingComplaints    int64          `json:"pending_complaints"`
+		ProcessingComplaints int64          `json:"processing_complaints"`
+		CompletedComplaints  int64          `json:"completed_complaints"`
+		TotalUsers           int64          `json:"total_users"`
+		ComplaintsByCategory []CategoryStat `json:"complaints_by_category"`
 	}
 
 	database.DB.Model(&models.Complaint{}).Count(&stats.TotalComplaints)
@@ -203,6 +210,16 @@ func (h *AdminHandler) GetDashboardStats(c *gin.Context) {
 	database.DB.Model(&models.Complaint{}).Where("status = ?", "processing").Count(&stats.ProcessingComplaints)
 	database.DB.Model(&models.Complaint{}).Where("status = ?", "completed").Count(&stats.CompletedComplaints)
 	database.DB.Model(&models.User{}).Where("role = ?", "user").Count(&stats.TotalUsers)
+
+	categoryStats := make([]CategoryStat, 0)
+	database.DB.Table("complaints").
+		Select("categories.name as category_name, count(complaints.id) as total").
+		Joins("JOIN categories ON categories.id = complaints.category_id").
+		Where("complaints.deleted_at IS NULL AND categories.deleted_at IS NULL").
+		Group("categories.id, categories.name").
+		Scan(&categoryStats)
+
+	stats.ComplaintsByCategory = categoryStats
 
 	utils.SuccessResponse(c, http.StatusOK, "Statistics retrieved successfully", stats)
 }

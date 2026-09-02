@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FiCheckCircle, FiClock, FiFileText, FiUsers } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Layout from '../../components/Layout';
@@ -113,35 +114,35 @@ const AdminDashboard = () => {
         <div className="card">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Aksi Cepat</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a
-              href="/admin/complaints?status=pending"
+            <Link
+              to="/admin/complaints?status=pending"
               className="p-4 border-2 border-yellow-200 bg-yellow-50 rounded-lg hover:shadow-md transition-shadow"
             >
               <h3 className="font-semibold text-yellow-800 mb-2">Pengaduan Baru</h3>
               <p className="text-sm text-yellow-700">
                 Ada {stats?.pending_complaints || 0} pengaduan menunggu ditangani
               </p>
-            </a>
+            </Link>
 
-            <a
-              href="/admin/complaints?status=processing"
+            <Link
+              to="/admin/complaints?status=processing"
               className="p-4 border-2 border-blue-200 bg-blue-50 rounded-lg hover:shadow-md transition-shadow"
             >
               <h3 className="font-semibold text-blue-800 mb-2">Sedang Diproses</h3>
               <p className="text-sm text-blue-700">
                 {stats?.processing_complaints || 0} pengaduan sedang ditangani
               </p>
-            </a>
+            </Link>
 
-            <a
-              href="/admin/complaints"
+            <Link
+              to="/admin/complaints"
               className="p-4 border-2 border-green-200 bg-green-50 rounded-lg hover:shadow-md transition-shadow"
             >
               <h3 className="font-semibold text-green-800 mb-2">Semua Pengaduan</h3>
               <p className="text-sm text-green-700">
                 Lihat dan kelola semua pengaduan
               </p>
-            </a>
+            </Link>
           </div>
         </div>
 

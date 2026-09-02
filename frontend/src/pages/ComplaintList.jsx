@@ -27,18 +27,20 @@ const ComplaintList = () => {
       setLoading(true);
       const params = {
         page: pagination.currentPage,
-        pageSize: pagination.pageSize,
+        page_size: pagination.pageSize,
       };
       if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
       
       const response = await api.get('/complaints', { params });
-      setComplaints(response.data.data);
+      const paginationData = response.data.data;
+      const list = Array.isArray(paginationData) ? paginationData : (paginationData?.data || []);
+      setComplaints(list);
       setPagination(prev => ({
         ...prev,
-        totalPages: response.data.totalPages,
-        totalItems: response.data.totalItems
+        totalPages: paginationData?.total_pages || 1,
+        totalItems: paginationData?.total_rows ?? list.length
       }));
     } catch (error) {
       toast.error('Gagal memuat data pengaduan');

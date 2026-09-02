@@ -25,16 +25,19 @@ const Dashboard = () => {
 
   const fetchComplaints = async () => {
     try {
-      const response = await api.get('/complaints?pageSize=100');
-      const data = response.data.data;
-      setComplaints(data.slice(0, 5)); // Show only 5 recent
+      const response = await api.get('/complaints?page_size=100');
+      const paginationData = response.data.data;
+      const list = Array.isArray(paginationData) ? paginationData : (paginationData?.data || []);
+      const total = paginationData?.total_rows ?? list.length;
+
+      setComplaints(list.slice(0, 5)); // Show only 5 recent
       
       // Calculate stats
       setStats({
-        total: response.data.totalItems || data.length,
-        pending: data.filter(c => c.status === 'pending').length,
-        processing: data.filter(c => c.status === 'processing').length,
-        completed: data.filter(c => c.status === 'completed').length,
+        total: total,
+        pending: list.filter(c => c.status === 'pending').length,
+        processing: list.filter(c => c.status === 'processing').length,
+        completed: list.filter(c => c.status === 'completed').length,
       });
     } catch (error) {
       toast.error('Gagal memuat data pengaduan');
