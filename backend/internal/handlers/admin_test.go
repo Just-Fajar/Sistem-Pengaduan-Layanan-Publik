@@ -4,50 +4,23 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 	"time"
 
-	"backend/internal/database"
 	"backend/internal/handlers"
 	"backend/internal/models"
 	"backend/internal/repository"
 	"backend/internal/service"
+	"backend/internal/testutil"
 	"backend/internal/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/gorm"
 )
-
-func setupTestDB(t *testing.T) *gorm.DB {
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
-	assert.NoError(t, err)
-
-	sqlDB, err := db.DB()
-	if err == nil {
-		t.Cleanup(func() {
-			_ = sqlDB.Close()
-		})
-	}
-
-	err = db.AutoMigrate(
-		&models.User{},
-		&models.Category{},
-		&models.Complaint{},
-		&models.Response{},
-	)
-	assert.NoError(t, err)
-
-	database.DB = db
-	return db
-}
 
 func TestAdminHandler_GetDashboardStats(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db := setupTestDB(t)
+	db := testutil.SetupTestDB(t)
 
 	// Seed test data
 	user := models.User{Name: "User 1", Email: "user1@test.com", Role: "user", CreatedAt: time.Now()}
@@ -55,10 +28,8 @@ func TestAdminHandler_GetDashboardStats(t *testing.T) {
 	db.Create(&user)
 	db.Create(&admin)
 
-	cat1 := models.Category{Name: "Infrastruktur", Description: "Jalan rusak"}
-	cat2 := models.Category{Name: "Kesehatan", Description: "Layanan RS"}
-	db.Create(&cat1)
-	db.Create(&cat2)
+	cat1 := testutil.CreateTestCategory(t, db, "Infrastruktur")
+	cat2 := testutil.CreateTestCategory(t, db, "Kesehatan")
 
 	// Create complaints with different categories and statuses
 	c1 := models.Complaint{UserID: user.ID, CategoryID: cat1.ID, Title: "Jalan Berlubang", Status: "pending"}
