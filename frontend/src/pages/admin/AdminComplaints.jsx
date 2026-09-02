@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { FiFilter, FiSearch, FiDownload, FiCalendar } from 'react-icons/fi';
+import { FiCalendar, FiDownload, FiFilter, FiSearch } from 'react-icons/fi';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Layout from '../../components/Layout';
-import StatusBadge from '../../components/StatusBadge';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import Pagination from '../../components/Pagination';
+import StatusBadge from '../../components/StatusBadge';
+import { useDebounce } from '../../hooks/useDebounce';
 import api from '../../utils/axios';
 
 const AdminComplaints = () => {
@@ -19,6 +21,9 @@ const AdminComplaints = () => {
     date_from: '',
     date_to: '',
   });
+
+  const debouncedSearch = useDebounce(filters.search, 300);
+
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -32,7 +37,7 @@ const AdminComplaints = () => {
 
   useEffect(() => {
     fetchComplaints();
-  }, [filters, pagination.currentPage]);
+  }, [debouncedSearch, filters.status, filters.category_id, filters.date_from, filters.date_to, pagination.currentPage]);
 
   const fetchCategories = async () => {
     try {
@@ -49,7 +54,8 @@ const AdminComplaints = () => {
       const params = {
         page: pagination.currentPage,
         page_size: pagination.pageSize,
-        ...filters
+        ...filters,
+        search: debouncedSearch,
       };
       
       // Remove empty filters
@@ -235,7 +241,9 @@ const AdminComplaints = () => {
 
         {/* Complaint Table */}
         <div className="card overflow-x-auto">
-          {complaints.length === 0 ? (
+          {loading ? (
+            <LoadingSpinner message="Memuat data pengaduan..." />
+          ) : complaints.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               Tidak ada pengaduan ditemukan
             </div>

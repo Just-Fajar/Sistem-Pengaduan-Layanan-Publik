@@ -40,9 +40,8 @@ func SetupRoutes(router *gin.Engine, db ...*gorm.DB) {
 	categoryHandler := handlers.NewCategoryHandler(categoryService, categoryRepo, complaintRepo)
 	exportHandler := handlers.NewExportHandler(complaintRepo)
 
-	// API v1 group
-	api := router.Group("/api")
-	{
+	// Helper function to register API routes
+	registerAPIRoutes := func(api *gin.RouterGroup) {
 		// Public routes - Auth
 		auth := api.Group("/auth")
 		{
@@ -96,6 +95,10 @@ func SetupRoutes(router *gin.Engine, db ...*gorm.DB) {
 			}
 		}
 	}
+
+	// Register API v1 (Primary versioned) and legacy /api routes
+	registerAPIRoutes(router.Group("/api/v1"))
+	registerAPIRoutes(router.Group("/api"))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {

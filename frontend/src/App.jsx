@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 
 // Auth Pages
 import Login from './pages/Login';
+import NotFound from './pages/NotFound';
 import Register from './pages/Register';
 
 // User Pages
@@ -136,7 +137,7 @@ function App() {
           />
 
           {/* 404 */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>
     </ErrorBoundary>
