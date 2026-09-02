@@ -28,7 +28,16 @@ type ChangePasswordRequest struct {
 // UpdateProfile updates user profile
 // PUT /api/profile
 func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	userID, ok := userIDRaw.(uint)
+	if !ok {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid user context", nil)
+		return
+	}
 
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -57,7 +66,16 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 // ChangePassword changes user password
 // PUT /api/profile/password
 func (h *ProfileHandler) ChangePassword(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	userID, ok := userIDRaw.(uint)
+	if !ok {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid user context", nil)
+		return
+	}
 
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

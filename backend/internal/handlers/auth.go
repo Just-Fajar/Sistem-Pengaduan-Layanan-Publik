@@ -104,7 +104,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // GetProfile gets current user profile
 // GET /api/auth/me
 func (h *AuthHandler) GetProfile(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	userID, ok := userIDRaw.(uint)
+	if !ok {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid user context", nil)
+		return
+	}
 
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
