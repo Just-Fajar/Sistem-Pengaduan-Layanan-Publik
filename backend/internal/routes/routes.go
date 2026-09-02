@@ -1,20 +1,44 @@
 package routes
 
 import (
+	"backend/internal/database"
 	"backend/internal/handlers"
 	"backend/internal/middleware"
+	"backend/internal/repository"
+	"backend/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func SetupRoutes(router *gin.Engine) {
-	// Initialize handlers
-	authHandler := handlers.NewAuthHandler()
-	complaintHandler := handlers.NewComplaintHandler()
-	adminHandler := handlers.NewAdminHandler()
-	profileHandler := handlers.NewProfileHandler()
-	categoryHandler := handlers.NewCategoryHandler()
-	exportHandler := handlers.NewExportHandler()
+func SetupRoutes(router *gin.Engine, db ...*gorm.DB) {
+	var gormDB *gorm.DB
+	if len(db) > 0 && db[0] != nil {
+		gormDB = db[0]
+	} else {
+		gormDB = database.DB
+	}
+
+	// Initialize Repositories
+	userRepo := repository.NewUserRepository(gormDB)
+	complaintRepo := repository.NewComplaintRepository(gormDB)
+	categoryRepo := repository.NewCategoryRepository(gormDB)
+	responseRepo := repository.NewResponseRepository(gormDB)
+
+	// Initialize Services
+	authService := service.NewAuthService(userRepo)
+	profileService := service.NewProfileService(userRepo)
+	categoryService := service.NewCategoryService(categoryRepo)
+	complaintService := service.NewComplaintService(complaintRepo, categoryRepo)
+	adminService := service.NewAdminService(complaintRepo, userRepo, responseRepo)
+
+	// Initialize Handlers
+	authHandler := handlers.NewAuthHandler(authService)
+	complaintHandler := handlers.NewComplaintHandler(complaintService, categoryService)
+	adminHandler := handlers.NewAdminHandler(adminService)
+	profileHandler := handlers.NewProfileHandler(profileService)
+	categoryHandler := handlers.NewCategoryHandler(categoryService, categoryRepo, complaintRepo)
+	exportHandler := handlers.NewExportHandler(complaintRepo)
 
 	// API v1 group
 	api := router.Group("/api")

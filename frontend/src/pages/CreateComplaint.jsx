@@ -21,6 +21,15 @@ const CreateComplaint = () => {
     fetchCategories();
   }, []);
 
+  // Cleanup object URL to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
+
   const fetchCategories = async () => {
     try {
       const response = await api.get('/categories');
@@ -50,6 +59,10 @@ const CreateComplaint = () => {
       if (!file.type.startsWith('image/')) {
         toast.error('File harus berupa gambar');
         return;
+      }
+
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview);
       }
 
       setPhoto(file);

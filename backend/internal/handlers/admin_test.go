@@ -11,6 +11,8 @@ import (
 	"backend/internal/database"
 	"backend/internal/handlers"
 	"backend/internal/models"
+	"backend/internal/repository"
+	"backend/internal/service"
 	"backend/internal/utils"
 
 	"github.com/gin-gonic/gin"
@@ -66,7 +68,11 @@ func TestAdminHandler_GetDashboardStats(t *testing.T) {
 	db.Create(&c2)
 	db.Create(&c3)
 
-	adminHandler := handlers.NewAdminHandler()
+	userRepo := repository.NewUserRepository(db)
+	complaintRepo := repository.NewComplaintRepository(db)
+	responseRepo := repository.NewResponseRepository(db)
+	adminService := service.NewAdminService(complaintRepo, userRepo, responseRepo)
+	adminHandler := handlers.NewAdminHandler(adminService)
 
 	r := gin.New()
 	r.GET("/api/admin/statistics", adminHandler.GetDashboardStats)

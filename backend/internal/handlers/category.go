@@ -1,65 +1,64 @@
 package handlers
 
 import (
-	"backend/internal/database"
 	"backend/internal/models"
+	"backend/internal/repository"
+	"backend/internal/service"
 	"backend/internal/utils"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-type CategoryHandler struct{}
-
-func NewCategoryHandler() *CategoryHandler {
-	return &CategoryHandler{}
+type CategoryHandler struct {
+	categoryService service.CategoryService
+	categoryRepo    repository.CategoryRepository
+	complaintRepo   repository.ComplaintRepository
 }
 
-type CreateCategoryRequest struct {
-	Name        string `json:"name" binding:"required,min=3,max=100"`
-	Description string `json:"description"`
-}
-
-type UpdateCategoryRequest struct {
-	Name        string `json:"name" binding:"required,min=3,max=100"`
-	Description string `json:"description"`
+func NewCategoryHandler(
+	categoryService service.CategoryService,
+	categoryRepo repository.CategoryRepository,
+	complaintRepo repository.ComplaintRepository,
+) *CategoryHandler {
+	return &CategoryHandler{
+		categoryService: categoryService,
+		categoryRepo:    categoryRepo,
+		complaintRepo:   complaintRepo,
+	}
 }
 
 // GetAllCategories gets all categories
 // GET /api/admin/categories
 func (h *CategoryHandler) GetAllCategories(c *gin.Context) {
-	var categories []models.Category
-	if err := database.DB.Find(&categories).Error; err != nil {
+	categories, err := h.categoryService.GetAllCategories()
+	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch categories", err.Error())
 		return
 	}
 
-	responses := make([]models.CategoryResponse, len(categories))
-	for i, category := range categories {
-		responses[i] = category.ToCategoryResponse()
-	}
-
-	utils.SuccessResponse(c, http.StatusOK, "Categories retrieved successfully", responses)
+	utils.SuccessResponse(c, http.StatusOK, "Categories retrieved successfully", categories)
 }
 
 // GetCategoryDetail gets category detail with complaint count
 // GET /api/admin/categories/:id
 func (h *CategoryHandler) GetCategoryDetail(c *gin.Context) {
-	categoryID := c.Param("id")
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil || id <= 0 {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid category ID", nil)
+		return
+	}
 
-	var category models.Category
-	if err := database.DB.First(&category, categoryID).Error; err != nil {
+	category, err := h.categoryService.GetCategoryDetail(uint(id))
+	if err != nil {
 		utils.ErrorResponse(c, http.StatusNotFound, "Category not found", nil)
 		return
 	}
 
-	// Count complaints
-	var complaintCount int64
-	database.DB.Model(&models.Complaint{}).Where("category_id = ?", categoryID).Count(&complaintCount)
-
 	response := gin.H{
-		"category":        category.ToCategoryResponse(),
-		"complaint_count": complaintCount,
+		"category": category,
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, "Category detail retrieved successfully", response)
@@ -68,88 +67,65 @@ func (h *CategoryHandler) GetCategoryDetail(c *gin.Context) {
 // CreateCategory creates new category
 // POST /api/admin/categories
 func (h *CategoryHandler) CreateCategory(c *gin.Context) {
-	var req CreateCategoryRequest
+	var req models.CreateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.ValidationErrorResponse(c, err.Error())
 		return
 	}
 
-	// Check if category name exists
-	var existingCategory models.Category
-	if err := database.DB.Where("name = ?", req.Name).First(&existingCategory).Error; err == nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Category name already exists", nil)
-		return
-	}
-
-	category := models.Category{
-		Name:        req.Name,
-		Description: req.Description,
-	}
-
-	if err := database.DB.Create(&category).Error; err != nil {
+	category, err := h.categoryService.CreateCategory(&req)
+	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create category", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, "Category created successfully", category.ToCategoryResponse())
+	utils.SuccessResponse(c, http.StatusCreated, "Category created successfully", category)
 }
 
 // UpdateCategory updates existing category
 // PUT /api/admin/categories/:id
 func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
-	categoryID := c.Param("id")
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil || id <= 0 {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid category ID", nil)
+		return
+	}
 
-	var req UpdateCategoryRequest
+	var req models.UpdateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.ValidationErrorResponse(c, err.Error())
 		return
 	}
 
-	var category models.Category
-	if err := database.DB.First(&category, categoryID).Error; err != nil {
-		utils.ErrorResponse(c, http.StatusNotFound, "Category not found", nil)
-		return
-	}
-
-	// Check if name is taken by another category
-	var existingCategory models.Category
-	if err := database.DB.Where("name = ? AND id != ?", req.Name, categoryID).First(&existingCategory).Error; err == nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Category name already exists", nil)
-		return
-	}
-
-	category.Name = req.Name
-	category.Description = req.Description
-
-	if err := database.DB.Save(&category).Error; err != nil {
+	category, err := h.categoryService.UpdateCategory(uint(id), &req)
+	if err != nil {
+		if err.Error() == "Category not found" {
+			utils.ErrorResponse(c, http.StatusNotFound, "Category not found", nil)
+			return
+		}
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update category", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Category updated successfully", category.ToCategoryResponse())
+	utils.SuccessResponse(c, http.StatusOK, "Category updated successfully", category)
 }
 
 // DeleteCategory deletes category
 // DELETE /api/admin/categories/:id
 func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
-	categoryID := c.Param("id")
-
-	var category models.Category
-	if err := database.DB.First(&category, categoryID).Error; err != nil {
-		utils.ErrorResponse(c, http.StatusNotFound, "Category not found", nil)
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil || id <= 0 {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid category ID", nil)
 		return
 	}
 
-	// Check if category has complaints
-	var complaintCount int64
-	database.DB.Model(&models.Complaint{}).Where("category_id = ?", categoryID).Count(&complaintCount)
-
-	if complaintCount > 0 {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Cannot delete category with existing complaints", nil)
-		return
-	}
-
-	if err := database.DB.Delete(&category).Error; err != nil {
+	if err := h.categoryService.DeleteCategory(uint(id)); err != nil {
+		if err.Error() == "Category not found" {
+			utils.ErrorResponse(c, http.StatusNotFound, "Category not found", nil)
+			return
+		}
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete category", err.Error())
 		return
 	}

@@ -1,20 +1,26 @@
 package handlers
 
 import (
-	"backend/internal/database"
 	"backend/internal/middleware"
 	"backend/internal/models"
+	"backend/internal/service"
 	"backend/internal/utils"
-	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-type ComplaintHandler struct{}
+type ComplaintHandler struct {
+	complaintService service.ComplaintService
+	categoryService  service.CategoryService
+}
 
-func NewComplaintHandler() *ComplaintHandler {
-	return &ComplaintHandler{}
+func NewComplaintHandler(complaintService service.ComplaintService, categoryService service.CategoryService) *ComplaintHandler {
+	return &ComplaintHandler{
+		complaintService: complaintService,
+		categoryService:  categoryService,
+	}
 }
 
 // CreateComplaint creates a new complaint
@@ -38,37 +44,18 @@ func (h *ComplaintHandler) CreateComplaint(c *gin.Context) {
 		return
 	}
 
-	// Check if category exists
-	var category models.Category
-	if err := database.DB.First(&category, req.CategoryID).Error; err != nil {
-		utils.ErrorResponse(c, http.StatusNotFound, "Category not found", nil)
-		return
-	}
-
-	// Create complaint
-	complaint := models.Complaint{
-		UserID:      userID,
-		CategoryID:  req.CategoryID,
-		Title:       req.Title,
-		Description: req.Description,
-		Status:      models.StatusPending,
-	}
-
-	// Get uploaded photo if exists
-	if filename := middleware.GetUploadedFilename(c); filename != "" {
-		complaint.PhotoURL = fmt.Sprintf("/uploads/%s", filename)
-	}
-
-	// Save to database
-	if err := database.DB.Create(&complaint).Error; err != nil {
+	filename := middleware.GetUploadedFilename(c)
+	complaint, err := h.complaintService.CreateComplaint(userID, &req, filename)
+	if err != nil {
+		if err.Error() == "Category not found" {
+			utils.ErrorResponse(c, http.StatusNotFound, "Category not found", nil)
+			return
+		}
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create complaint", err.Error())
 		return
 	}
 
-	// Load relations
-	database.DB.Preload("User").Preload("Category").First(&complaint, complaint.ID)
-
-	utils.SuccessResponse(c, http.StatusCreated, "Complaint created successfully", complaint.ToComplaintResponse())
+	utils.SuccessResponse(c, http.StatusCreated, "Complaint created successfully", complaint)
 }
 
 // GetMyComplaints gets all complaints for current user
@@ -84,46 +71,29 @@ func (h *ComplaintHandler) GetMyComplaints(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid user context", nil)
 		return
 	}
-	
-	// Get pagination params
+
 	pagination := utils.GetPaginationParams(c)
+	status := c.Query("status")
 
-	// Build query
-	query := database.DB.Model(&models.Complaint{}).
-		Where("user_id = ?", userID).
-		Preload("Category").
-		Preload("Responses")
-
-	// Filter by status if provided
-	if status := c.Query("status"); status != "" {
-		query = query.Where("status = ?", status)
-	}
-
-	// Count total rows
-	var totalRows int64
-	query.Count(&totalRows)
-
-	// Get complaints with pagination
-	var complaints []models.Complaint
-	if err := query.Scopes(utils.Paginate(pagination)).Order("created_at DESC").Find(&complaints).Error; err != nil {
+	result, err := h.complaintService.GetMyComplaints(userID, status, pagination)
+	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch complaints", err.Error())
 		return
 	}
 
-	// Convert to response format
-	responses := make([]models.ComplaintResponse, len(complaints))
-	for i, complaint := range complaints {
-		responses[i] = complaint.ToComplaintResponse()
-	}
-
-	result := utils.BuildPaginationResult(pagination.Page, pagination.PageSize, totalRows, responses)
 	utils.SuccessResponse(c, http.StatusOK, "Complaints retrieved successfully", result)
 }
 
 // GetComplaintDetail gets complaint detail by ID
 // GET /api/complaints/:id
 func (h *ComplaintHandler) GetComplaintDetail(c *gin.Context) {
-	complaintID := c.Param("id")
+	idParam := c.Param("id")
+	complaintID, err := strconv.Atoi(idParam)
+	if err != nil || complaintID <= 0 {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid complaint ID", nil)
+		return
+	}
+
 	userIDRaw, exists := c.Get("user_id")
 	if !exists {
 		utils.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized", nil)
@@ -135,37 +105,23 @@ func (h *ComplaintHandler) GetComplaintDetail(c *gin.Context) {
 		return
 	}
 
-	var complaint models.Complaint
-	query := database.DB.Preload("User").
-		Preload("Category").
-		Preload("Responses.Admin")
-
-	// User can only see their own complaints
-	query = query.Where("id = ? AND user_id = ?", complaintID, userID)
-
-	if err := query.First(&complaint).Error; err != nil {
+	complaint, err := h.complaintService.GetComplaintDetail(uint(complaintID), userID)
+	if err != nil {
 		utils.ErrorResponse(c, http.StatusNotFound, "Complaint not found", nil)
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Complaint detail retrieved successfully", complaint.ToComplaintResponse())
+	utils.SuccessResponse(c, http.StatusOK, "Complaint detail retrieved successfully", complaint)
 }
 
 // GetCategories gets all categories
 // GET /api/categories
 func (h *ComplaintHandler) GetCategories(c *gin.Context) {
-	var categories []models.Category
-
-	if err := database.DB.Find(&categories).Error; err != nil {
+	categories, err := h.categoryService.GetAllCategories()
+	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch categories", err.Error())
 		return
 	}
 
-	// Convert to response format
-	responses := make([]models.CategoryResponse, len(categories))
-	for i, category := range categories {
-		responses[i] = category.ToCategoryResponse()
-	}
-
-	utils.SuccessResponse(c, http.StatusOK, "Categories retrieved successfully", responses)
+	utils.SuccessResponse(c, http.StatusOK, "Categories retrieved successfully", categories)
 }

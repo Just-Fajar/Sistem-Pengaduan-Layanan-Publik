@@ -42,6 +42,11 @@ type UpdateStatusRequest struct {
 	Status ComplaintStatus `json:"status" binding:"required,oneof=pending processing completed"`
 }
 
+type CategoryStat struct {
+	CategoryName string `json:"category_name"`
+	Total        int64  `json:"total"`
+}
+
 type ComplaintResponse struct {
 	ID          uint              `json:"id"`
 	UserID      uint              `json:"user_id"`
