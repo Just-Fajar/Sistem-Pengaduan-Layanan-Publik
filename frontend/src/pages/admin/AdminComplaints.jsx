@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FiFilter, FiSearch, FiDownload, FiCalendar } from 'react-icons/fi';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Layout from '../../components/Layout';
 import StatusBadge from '../../components/StatusBadge';
@@ -48,7 +48,7 @@ const AdminComplaints = () => {
       setLoading(true);
       const params = {
         page: pagination.currentPage,
-        pageSize: pagination.pageSize,
+        page_size: pagination.pageSize,
         ...filters
       };
       
@@ -58,11 +58,13 @@ const AdminComplaints = () => {
       });
 
       const response = await api.get('/admin/complaints', { params });
-      setComplaints(response.data.data);
+      const paginationData = response.data.data;
+      const list = Array.isArray(paginationData) ? paginationData : (paginationData?.data || []);
+      setComplaints(list);
       setPagination(prev => ({
         ...prev,
-        totalPages: response.data.totalPages,
-        totalItems: response.data.totalItems
+        totalPages: paginationData?.total_pages || 1,
+        totalItems: paginationData?.total_rows ?? list.length
       }));
     } catch (error) {
       toast.error('Gagal memuat data pengaduan');
@@ -282,12 +284,12 @@ const AdminComplaints = () => {
                       <StatusBadge status={complaint.status} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <a
-                        href={`/admin/complaints/${complaint.id}`}
+                      <Link
+                        to={`/admin/complaints/${complaint.id}`}
                         className="text-primary hover:text-blue-700 font-medium"
                       >
                         Detail →
-                      </a>
+                      </Link>
                     </td>
                   </tr>
                 ))}
