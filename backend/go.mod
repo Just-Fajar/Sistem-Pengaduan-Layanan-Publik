@@ -1,6 +1,6 @@
 module backend
 
-go 1.25.5
+go 1.25.0
 
 require (
 	github.com/gin-gonic/gin v1.11.0
@@ -10,6 +10,8 @@ require (
 	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.46.0
+	golang.org/x/text v0.32.0
+	golang.org/x/time v0.15.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.31.2
 )
@@ -52,8 +54,6 @@ require (
 	golang.org/x/arch v0.23.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.22.5 // indirect
