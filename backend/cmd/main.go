@@ -33,6 +33,7 @@ func main() {
 
 	// Global middleware
 	router.Use(middleware.CORSMiddleware())
+	router.Use(middleware.SecurityHeadersMiddleware())
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.LoggerMiddleware())
 
