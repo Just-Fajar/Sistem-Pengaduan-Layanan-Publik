@@ -39,6 +39,7 @@ func SetupRoutes(router *gin.Engine, db ...*gorm.DB) {
 	profileHandler := handlers.NewProfileHandler(profileService)
 	categoryHandler := handlers.NewCategoryHandler(categoryService, categoryRepo, complaintRepo)
 	exportHandler := handlers.NewExportHandler(complaintRepo)
+	healthHandler := handlers.NewHealthHandler(gormDB)
 
 	// Helper function to register API routes
 	registerAPIRoutes := func(api *gin.RouterGroup) {
@@ -100,13 +101,9 @@ func SetupRoutes(router *gin.Engine, db ...*gorm.DB) {
 	registerAPIRoutes(router.Group("/api/v1"))
 	registerAPIRoutes(router.Group("/api"))
 
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "ok",
-			"message": "Server is running",
-		})
-	})
+	// Health check probes (Liveness & Readiness)
+	router.GET("/health", healthHandler.Liveness)
+	router.GET("/ready", healthHandler.Readiness)
 
 	// Serve uploaded files
 	router.Static("/uploads", "./uploads")
