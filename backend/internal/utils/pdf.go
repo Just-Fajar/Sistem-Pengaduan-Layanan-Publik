@@ -14,6 +14,19 @@ func NewPDFExporter() *PDFExporter {
 	return &PDFExporter{}
 }
 
+// cleanPDFText ensures text is safely encodable in standard PDF Latin-1 font
+func cleanPDFText(s string) string {
+	var result []rune
+	for _, r := range s {
+		if (r >= 32 && r <= 255) || r == '\n' || r == '\r' || r == '\t' {
+			result = append(result, r)
+		} else if r > 255 {
+			result = append(result, '?')
+		}
+	}
+	return string(result)
+}
+
 func (e *PDFExporter) ExportComplaintsToPDF(complaints []models.Complaint, filename string) error {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
@@ -47,8 +60,8 @@ func (e *PDFExporter) ExportComplaintsToPDF(complaints []models.Complaint, filen
 		fill := i%2 == 0
 		pdf.CellFormat(15, 7, fmt.Sprintf("%d", complaint.ID), "1", 0, "C", fill, 0, "")
 		
-		// Truncate title if too long
-		title := complaint.Title
+		// Truncate and clean title
+		title := cleanPDFText(complaint.Title)
 		if len(title) > 40 {
 			title = title[:37] + "..."
 		}
@@ -56,7 +69,7 @@ func (e *PDFExporter) ExportComplaintsToPDF(complaints []models.Complaint, filen
 		
 		categoryName := ""
 		if complaint.Category.ID != 0 {
-			categoryName = complaint.Category.Name
+			categoryName = cleanPDFText(complaint.Category.Name)
 		}
 		pdf.CellFormat(40, 7, categoryName, "1", 0, "L", fill, 0, "")
 		pdf.CellFormat(30, 7, string(complaint.Status), "1", 0, "C", fill, 0, "")

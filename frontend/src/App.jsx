@@ -6,9 +6,11 @@ import { AdminRoute, GuestRoute, ProtectedRoute } from './components/ProtectedRo
 import { AuthProvider } from './context/AuthContext';
 
 // Auth Pages
+import ForgotPassword from './pages/ForgotPassword';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 
 // User Pages
 import ComplaintDetail from './pages/ComplaintDetail';
@@ -56,6 +58,22 @@ function App() {
             element={
               <GuestRoute>
                 <Register />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <GuestRoute>
+                <ForgotPassword />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <GuestRoute>
+                <ResetPassword />
               </GuestRoute>
             }
           />
