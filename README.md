@@ -1,251 +1,262 @@
-# Sistem Pengaduan Layanan Publik
+# 📢 Sistem Pengaduan Layanan Publik
 
-Aplikasi web untuk mengelola pengaduan layanan publik dengan sistem yang terintegrasi antara masyarakat dan administrator.
+[![CI Pipeline](https://github.com/Just-Fajar/Sistem-Pengaduan-Layanan-Publik/actions/workflows/ci.yml/badge.svg)](https://github.com/Just-Fajar/Sistem-Pengaduan-Layanan-Publik/actions/workflows/ci.yml)
+[![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://golang.org)
+[![React Version](https://img.shields.io/badge/React-18-61DAFB.svg)](https://reactjs.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## 🎯 Features
+Aplikasi web modern berbasis **Clean Architecture (Go + React)** untuk mengelola laporan dan pengaduan layanan publik secara transparan, aman, dan terintegrasi antara masyarakat dan instansi administrator.
 
-### 👤 User Features
-- 🔐 Login & Register
-- 📝 Buat pengaduan dengan upload foto
-- 📊 Dashboard dengan statistik pengaduan
-- 🔍 Tracking status pengaduan real-time
-- 📜 Riwayat pengaduan lengkap
-- 💬 Lihat tanggapan dari admin
+---
 
-### 🧑‍💼 Admin Features
-- 📈 Dashboard dengan statistik lengkap
-- 🗂️ Kelola semua pengaduan
-- 🔎 Filter & search pengaduan
-- ✅ Update status (Menunggu → Diproses → Selesai)
-- 💬 Beri tanggapan ke pengaduan
-- 👥 Lihat informasi pelapor
+## 🏗️ Arsitektur Sistem
 
-## 🔧 Tech Stack
+Proyek ini dirancang menggunakan **Clean Layered Architecture** dengan prinsip *Separation of Concerns* dan *Dependency Injection*:
 
-### Backend
-- **Language**: Go 1.23+
-- **Framework**: Gin
-- **Database**: MySQL 8.0+
-- **ORM**: GORM
-- **Auth**: JWT (JSON Web Token)
-- **Validation**: Go Validator
-- **Password**: Bcrypt
+```
+[ HTTP Router & Middlewares ] (Gin, Slog, Rate Limiter, Security Headers)
+            │
+            ▼
+   [ Handler Layer ] (HTTP Request Parsing & Response Serializer)
+            │ (Dependency Injection via Constructor)
+            ▼
+   [ Service Layer ] (Business Logic, Validation, Password Recovery)
+            │ (Interface-based Dependency)
+            ▼
+ [ Repository Layer ] (Database Abstraction & Queries)
+            │
+            ▼
+[ Relational DB / Storage ] (MySQL / SQLite in-memory for testing)
+```
 
-### Frontend
-- **Framework**: React 18
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **Routing**: React Router v6
-- **HTTP Client**: Axios
-- **Notifications**: React Toastify
+---
 
-## 📁 Project Structure
+## ✨ Fitur Unggulan
+
+### 👤 Pengguna (Masyarakat)
+- 🔐 **Autentikasi & Registrasi:** Registrasi akun baru, login JWT, dan pemulihan kata sandi (*Forgot & Reset Password*).
+- 📝 **Buat Pengaduan:** Form pembuatan laporan lengkap dengan upload foto bukti, pemilihan kategori, dan validasi berkas.
+- 📊 **Dashboard Interaktif:** Ringkasan statistik status pengaduan (Total, Menunggu, Diproses, Selesai).
+- 🔍 **Tracking Status:** Pelacakan status pengaduan real-time dan riwayat tanggapan resmi dari petugas.
+- 👤 **Manajemen Profil:** Pembaruan nama, nomor telepon, dan pergantian password.
+
+### 🧑‍💼 Administrator
+- 📈 **Dashboard Statistik:** Agregasi jumlah laporan, user aktif, serta breakdown pengaduan per kategori.
+- 🗂️ **Manajemen Pengaduan:** Filter status, pencarian instan dengan **Search Debounce (300ms)**, dan paginasi terpusat.
+- ⚡ **Tindak Lanjut & Tanggapan:** Pembaruan status alur (*Pending $\rightarrow$ Processing $\rightarrow$ Completed*) dan pengiriman tanggapan resmi ke pelapor.
+- 🏷️ **Kelola Kategori:** CRUD kategori layanan pengaduan.
+- 📄 **Ekspor Laporan PDF:** Rekapitulasi laporan pengaduan ke format PDF lengkap dengan sanitasi teks multibyte.
+
+---
+
+## 🔒 Keamanan & Observabilitas
+
+- ✅ **IP Rate Limiting:** Pembatasan trafik global (100 req/menit) dan endpoint login/auth (5 req/menit) untuk mencegah brute-force.
+- ✅ **OWASP Security Headers:** Penerapan header keamanan (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`).
+- ✅ **CORS Protection:** Pembatasan domain asal (*Origin*) yang diizinkan melalui konfigurasi `ALLOWED_ORIGIN`.
+- ✅ **Password Hashing:** Enkripsi password menggunakan `bcrypt`.
+- ✅ **Structured Logging (`log/slog`):** Pencatatan log terstruktur JSON dengan pencatatan latensi, IP, method, status code, dan penelusuran **`X-Request-ID`**.
+- ✅ **Health & Readiness Probes:** Endpoint `/health` (liveness) dan `/ready` (readiness dengan verifikasi konektivitas database).
+- ✅ **Graceful Shutdown:** Pembersihan koneksi database dan penuntasan request aktif sebelum server berhenti.
+- ✅ **Frontend Error Boundary:** Penanganan runtime render error tanpa merusak aplikasi.
+
+---
+
+## 🛠️ Tech Stack
+
+| Komponen | Teknologi |
+|---|---|
+| **Backend Language** | Go 1.24+ |
+| **HTTP Framework** | Gin Web Framework |
+| **ORM & Database** | GORM (MySQL 8.0 / SQLite in-memory test) |
+| **Authentication** | JWT (JSON Web Tokens) & Bcrypt |
+| **Structured Logger** | Go Standard Library `log/slog` |
+| **Frontend Framework** | React 18 & Vite |
+| **Styling** | Tailwind CSS & React Icons |
+| **Routing & Client** | React Router v6 & Axios |
+| **Containerization** | Docker & Docker Compose (Multi-stage build) |
+| **CI Automation** | GitHub Actions Workflow |
+
+---
+
+## 📁 Struktur Proyek
 
 ```
 Sistem-Pengaduan-Layanan-Publik/
-├── backend/                 # Backend Go application
-│   ├── cmd/                # Entry point
-│   ├── internal/           # Internal packages
-│   │   ├── config/        # Configuration
-│   │   ├── database/      # Database connection
-│   │   ├── handlers/      # Request handlers
-│   │   ├── middleware/    # Middleware functions
-│   │   ├── models/        # Data models
-│   │   ├── routes/        # Route definitions
-│   │   └── utils/         # Utility functions
-│   ├── uploads/           # Uploaded files
+├── .github/workflows/       # GitHub Actions CI pipeline
+├── backend/                 # Backend Go Application
+│   ├── cmd/                 # Application Entry Point (main.go)
+│   ├── internal/
+│   │   ├── config/          # Environment & Config Loader
+│   │   ├── database/        # Database Connection Pool
+│   │   ├── handlers/        # HTTP Handlers (Dependency Injected)
+│   │   ├── middleware/      # Auth, CORS, Slog Logger, Rate Limiter, Security
+│   │   ├── models/          # GORM Entities & Request/Response DTOs
+│   │   ├── repository/      # Repository Layer (Data Access Interfaces & Impl)
+│   │   ├── service/         # Service Layer (Business Logic Interfaces & Impl)
+│   │   ├── testutil/        # In-memory Test DB & Model Fixture Helpers
+│   │   └── utils/           # JWT, Pagination, Email, PDF Exporter
+│   ├── uploads/             # Direktori berkas unggahan
+│   ├── Dockerfile           # Multi-stage Go Dockerfile
 │   └── go.mod
-├── frontend/               # Frontend React application
+├── frontend/                # Frontend React Application
 │   ├── src/
-│   │   ├── components/    # Reusable components
-│   │   ├── context/       # React contexts
-│   │   ├── pages/         # Page components
-│   │   ├── utils/         # Utility functions
-│   │   └── App.jsx
+│   │   ├── components/      # ErrorBoundary, Layout, LoadingSpinner, Navbar
+│   │   ├── context/         # AuthContext & State Management
+│   │   ├── hooks/           # useComplaints, useCategories, useDebounce
+│   │   ├── pages/           # Dashboard, ComplaintDetail, ForgotPassword, NotFound
+│   │   └── utils/           # Axios Client (/api/v1)
+│   ├── nginx.conf           # Nginx configuration untuk Container
+│   ├── Dockerfile           # Multi-stage React + Nginx Dockerfile
 │   └── package.json
-└── database/               # Database files
-    ├── migrations/        # SQL migration files
-    ├── setup.sql          # Database setup script
-    └── seed.sql           # Seed data
+├── database/                # SQL Migrations & Database Setup
+├── docker-compose.yml       # Local Development Container Stack
+├── Makefile                 # Developer Automation Commands
+└── README.md
 ```
 
-## 🚀 Getting Started
+---
 
-### Prerequisites
-- Go 1.23 or higher
-- Node.js 18 or higher
-- MySQL 8.0 or higher
+## 🚀 Panduan Menjalankan Aplikasi Lokal
 
-### 1. Database Setup
+Anda dapat menjalankan aplikasi di lingkungan lokal dengan salah satu dari 3 cara berikut:
+
+### 🔹 Opsi 1: Menggunakan Docker Compose (Direkomendasikan)
+Menjalankan seluruh ekosistem (MySQL 8.0, Backend Go, dan Frontend Nginx) hanya dengan satu perintah:
 
 ```bash
-# Login ke MySQL
-mysql -u root -p
+# Build dan jalankan seluruh container di background
+docker-compose up -d --build
 
-# Buat database dan run migrations
-source database/setup.sql
+# Untuk melihat logs aktivitas container
+docker-compose logs -f
 
-# (Optional) Insert test data
-source database/seed.sql
+# Untuk menghentikan container
+docker-compose down
+```
+- Frontend: **http://localhost:3000**
+- Backend API: **http://localhost:8080**
+- Health Probe: **http://localhost:8080/health**
+
+---
+
+### 🔹 Opsi 2: Menggunakan `Makefile` (Developer Tooling)
+Jika Anda memiliki `make` terpasang di sistem:
+
+```bash
+# Jalankan seluruh unit & integration tests backend
+make test
+
+# Build binary backend dan bundle frontend
+make build
+
+# Jalankan docker compose lokal
+make docker-up
+
+# Hentikan docker compose lokal
+make docker-down
 ```
 
-### 2. Backend Setup
+---
 
+### 🔹 Opsi 3: Menjalankan Secara Manual
+
+#### 1. Setup Database MySQL
+Pastikan MySQL service aktif di komputer Anda:
+```bash
+mysql -u root -p < database/setup.sql
+```
+
+#### 2. Menjalankan Backend
 ```bash
 cd backend
-
-# Copy environment file
 cp .env.example .env
+# Sesuaikan isi .env (DB_USER, DB_PASSWORD, JWT_SECRET, dll)
 
-# Edit .env dengan konfigurasi Anda
-# DB_HOST, DB_USER, DB_PASSWORD, JWT_SECRET, dll
-
-# Install dependencies
-go mod download
-
-# Run backend
 go run cmd/main.go
 ```
+Backend berjalan di **http://localhost:8080**.
 
-Backend akan berjalan di **http://localhost:8080**
-
-### 3. Frontend Setup
-
+#### 3. Menjalankan Frontend
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Run development server
 npm run dev
 ```
+Frontend berjalan di **http://localhost:3000**.
 
-Frontend akan berjalan di **http://localhost:3000**
+---
 
-## 📡 API Endpoints
+## 📡 Katalog Endpoint REST API (`/api/v1`)
 
-### Authentication
-```
-POST   /api/auth/register      - Register user baru
-POST   /api/auth/login         - Login user/admin
-GET    /api/auth/me            - Get current user
-```
+### 🔐 Autentikasi
+| Method | Endpoint | Keterangan | Akses |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/register` | Mendaftarkan akun user baru | Publik |
+| `POST` | `/api/v1/auth/login` | Login user atau admin (Return JWT) | Publik |
+| `POST` | `/api/v1/auth/forgot-password` | Permintaan token reset password | Publik |
+| `POST` | `/api/v1/auth/reset-password` | Atur ulang password baru via token | Publik |
+| `GET` | `/api/v1/auth/me` | Mengambil profil user yang sedang login | Authenticated |
+| `PUT` | `/api/v1/profile` | Memperbarui informasi profil | Authenticated |
+| `PUT` | `/api/v1/profile/password` | Mengganti kata sandi | Authenticated |
 
-### Categories
-```
-GET    /api/categories         - Get all categories
-```
+### 📝 Pengaduan (User)
+| Method | Endpoint | Keterangan | Akses |
+|---|---|---|---|
+| `GET` | `/api/v1/categories` | Mengambil daftar kategori pengaduan | Authenticated |
+| `POST` | `/api/v1/complaints` | Membuat pengaduan baru (+ upload foto) | Authenticated |
+| `GET` | `/api/v1/complaints` | Mengambil daftar pengaduan saya (Paginated) | Authenticated |
+| `GET` | `/api/v1/complaints/:id` | Mengambil detail riwayat pengaduan | Authenticated |
 
-### User - Complaints
-```
-POST   /api/complaints         - Create complaint (+ photo)
-GET    /api/complaints         - Get user's complaints
-GET    /api/complaints/:id     - Get complaint detail
-```
+### 🧑‍💼 Manajemen Administrator
+| Method | Endpoint | Keterangan | Akses |
+|---|---|---|---|
+| `GET` | `/api/v1/admin/statistics` | Mengambil data statistik dashboard admin | Admin |
+| `GET` | `/api/v1/admin/complaints` | Mengambil semua pengaduan (Filter & Search) | Admin |
+| `GET` | `/api/v1/admin/complaints/:id`| Mengambil detail pengaduan untuk admin | Admin |
+| `PUT` | `/api/v1/admin/complaints/:id/status` | Mengubah status pengaduan | Admin |
+| `POST` | `/api/v1/admin/complaints/:id/response` | Memberikan tanggapan resmi admin | Admin |
+| `GET` | `/api/v1/admin/categories` | Mengambil seluruh kategori (Admin) | Admin |
+| `POST` | `/api/v1/admin/categories` | Membuat kategori pengaduan baru | Admin |
+| `PUT` | `/api/v1/admin/categories/:id` | Memperbarui nama/deskripsi kategori | Admin |
+| `DELETE`| `/api/v1/admin/categories/:id`| Menghapus kategori pengaduan | Admin |
+| `GET` | `/api/v1/admin/export/complaints/pdf` | Ekspor rekap pengaduan ke PDF | Admin |
 
-### Admin - Management
-```
-GET    /api/admin/statistics           - Dashboard statistics
-GET    /api/admin/complaints           - Get all complaints
-GET    /api/admin/complaints/:id       - Get complaint detail
-PUT    /api/admin/complaints/:id/status - Update status
-POST   /api/admin/complaints/:id/response - Add response
-```
+### 🩺 Observabilitas & Health Checks
+| Method | Endpoint | Keterangan | Akses |
+|---|---|---|---|
+| `GET` | `/health` | Liveness probe (Status HTTP Server) | Publik |
+| `GET` | `/ready` | Readiness probe (Verifikasi koneksi database) | Publik |
 
-## 🔐 Default Credentials
+---
 
-### Admin Account
-```
-Email: admin@example.com
-Password: password123
-```
+## 🧪 Pengujian (Testing Suite)
 
-### User Account
-```
-Email: john@example.com
-Password: password123
-```
+Proyek ini mencakup pengujian komprehensif dengan 3 metode:
+1. ⚪ **White-Box Testing:** Unit testing internal logic model, JWT claim extraction, service methods, dan middleware.
+2. ⚫ **Black-Box Testing:** Integration tests memverifikasi HTTP response envelope, status codes, dan error payloads.
+3. 🔘 **Grey-Box Testing:** Pengujian integrasi in-memory SQLite database (`internal/testutil`) untuk memastikan relasi tabel dan constraint query.
 
-## 🗄️ Database Schema
-
-### Tables
-1. **users** - User & admin accounts
-2. **categories** - Complaint categories
-3. **complaints** - User complaints
-4. **responses** - Admin responses
-
-### Status Flow
-```
-pending → processing → completed
-```
-
-## 🎨 Screenshots
-
-### User Dashboard
-- Statistik pengaduan (Total, Menunggu, Diproses, Selesai)
-- Daftar pengaduan terbaru
-- Quick actions
-
-### Admin Dashboard
-- Statistik lengkap sistem
-- Performance metrics
-- Quick access to pending complaints
-
-## 🔒 Security Features
-
-- ✅ Password hashing dengan Bcrypt
-- ✅ JWT authentication
-- ✅ Role-based access control (User/Admin)
-- ✅ File upload validation (type & size)
-- ✅ CORS configuration
-- ✅ Input validation & sanitization
-- ✅ Protected routes
-
-## 🧪 Testing
-
-### Backend
 ```bash
+# Menjalankan seluruh test suite backend dengan code coverage
 cd backend
-go test ./...
-```
+go test -v -cover ./...
 
-### Frontend
-```bash
-cd frontend
-npm run test
-```
-
-## 📦 Build for Production
-
-### Backend
-```bash
-cd backend
-go build -o pengaduan-api cmd/main.go
-```
-
-### Frontend
-```bash
+# Menjalankan build bundle frontend
 cd frontend
 npm run build
 ```
 
-## 🐳 Docker (Optional)
+---
 
-Coming soon...
+## 👤 Akun Demo (Development Mode)
 
-## 📄 License
-
-MIT License
-
-## 👥 Contributors
-
-- Your Name
-
-## 📞 Support
-
-Jika ada pertanyaan atau masalah, silakan buat issue di repository ini.
+| Role | Email | Password |
+|---|---|---|
+| **Administrator** | `admin@example.com` | `password123` |
+| **Masyarakat / User** | `john@example.com` | `password123` |
 
 ---
 
-**Made with ❤️ for Public Service**
+## 📄 Lisensi
+Didistribusikan di bawah Lisensi MIT. Lihat file `LICENSE` untuk informasi lebih lanjut.
