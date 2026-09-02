@@ -3,7 +3,9 @@ package middleware
 import (
 	"backend/internal/config"
 	"backend/internal/utils"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -48,7 +50,7 @@ func FileUploadMiddleware() gin.HandlerFunc {
 
 		// Generate unique filename
 		ext := filepath.Ext(file.Filename)
-		filename := fmt.Sprintf("%d_%s%s", time.Now().Unix(), generateRandomString(10), ext)
+		filename := fmt.Sprintf("%d_%s%s", time.Now().Unix(), GenerateRandomString(10), ext)
 
 		// Create upload directory if not exists
 		uploadPath := config.AppConfig.Upload.Path
@@ -72,12 +74,17 @@ func FileUploadMiddleware() gin.HandlerFunc {
 	}
 }
 
-// generateRandomString generates random string for filename
-func generateRandomString(length int) string {
-	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+// GenerateRandomString generates cryptographically secure random string for filename
+func GenerateRandomString(length int) string {
+	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	result := make([]byte, length)
 	for i := range result {
-		result[i] = chars[time.Now().UnixNano()%int64(len(chars))]
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		if err != nil {
+			result[i] = chars[i%len(chars)]
+			continue
+		}
+		result[i] = chars[num.Int64()]
 	}
 	return string(result)
 }

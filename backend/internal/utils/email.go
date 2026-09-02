@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/smtp"
 	"os"
-	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type EmailService struct {
@@ -19,7 +21,7 @@ type EmailService struct {
 func NewEmailService() *EmailService {
 	return &EmailService{
 		SMTPHost: getEnv("SMTP_HOST", "smtp.gmail.com"),
-		SMTPPort: getEnv("SMTP_PORT", "587"),
+		SMTPPort: getEnv("SMTP_PORT", "465"),
 		From:     getEnv("SMTP_FROM", ""),
 		Password: getEnv("SMTP_PASSWORD", ""),
 	}
@@ -52,7 +54,7 @@ func (e *EmailService) SendEmail(to, subject, body string) error {
 
 	// Setup TLS config
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: false,
 		ServerName:         e.SMTPHost,
 	}
 
@@ -102,6 +104,7 @@ func (e *EmailService) SendEmail(to, subject, body string) error {
 
 func (e *EmailService) SendStatusUpdateNotification(userEmail, userName, complaintTitle, oldStatus, newStatus string) error {
 	subject := "Update Status Pengaduan - " + complaintTitle
+	caser := cases.Title(language.Indonesian)
 
 	body := fmt.Sprintf(`
 		<html>
@@ -124,7 +127,7 @@ func (e *EmailService) SendStatusUpdateNotification(userEmail, userName, complai
 			</div>
 		</body>
 		</html>
-	`, userName, complaintTitle, strings.Title(oldStatus), strings.Title(newStatus))
+	`, userName, complaintTitle, caser.String(oldStatus), caser.String(newStatus))
 
 	return e.SendEmail(userEmail, subject, body)
 }
