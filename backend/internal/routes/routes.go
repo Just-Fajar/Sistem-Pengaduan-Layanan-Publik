@@ -22,8 +22,8 @@ func SetupRoutes(router *gin.Engine) {
 		// Public routes - Auth
 		auth := api.Group("/auth")
 		{
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
+			auth.POST("/register", middleware.AuthRateLimiter(), authHandler.Register)
+			auth.POST("/login", middleware.AuthRateLimiter(), authHandler.Login)
 		}
 
 		// Protected routes - require authentication

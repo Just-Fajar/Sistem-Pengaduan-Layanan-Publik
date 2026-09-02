@@ -27,7 +27,16 @@ func (h *ComplaintHandler) CreateComplaint(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	userID, ok := userIDRaw.(uint)
+	if !ok {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid user context", nil)
+		return
+	}
 
 	// Check if category exists
 	var category models.Category
@@ -38,7 +47,7 @@ func (h *ComplaintHandler) CreateComplaint(c *gin.Context) {
 
 	// Create complaint
 	complaint := models.Complaint{
-		UserID:      userID.(uint),
+		UserID:      userID,
 		CategoryID:  req.CategoryID,
 		Title:       req.Title,
 		Description: req.Description,
@@ -65,29 +74,38 @@ func (h *ComplaintHandler) CreateComplaint(c *gin.Context) {
 // GetMyComplaints gets all complaints for current user
 // GET /api/complaints
 func (h *ComplaintHandler) GetMyComplaints(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	userID, ok := userIDRaw.(uint)
+	if !ok {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid user context", nil)
+		return
+	}
 	
 	// Get pagination params
-	params := utils.GetPaginationParams(c)
-	status := c.Query("status")
-	
-	query := database.DB.Where("user_id = ?", userID).
-		Preload("Category").
-		Preload("Responses.Admin").
-		Order("created_at desc")
+	pagination := utils.GetPaginationParams(c)
 
-	// Apply status filter
-	if status != "" {
+	// Build query
+	query := database.DB.Model(&models.Complaint{}).
+		Where("user_id = ?", userID).
+		Preload("Category").
+		Preload("Responses")
+
+	// Filter by status if provided
+	if status := c.Query("status"); status != "" {
 		query = query.Where("status = ?", status)
 	}
 
-	// Count total
+	// Count total rows
 	var totalRows int64
-	query.Model(&models.Complaint{}).Count(&totalRows)
+	query.Count(&totalRows)
 
-	// Get paginated results
+	// Get complaints with pagination
 	var complaints []models.Complaint
-	if err := query.Scopes(utils.Paginate(params)).Find(&complaints).Error; err != nil {
+	if err := query.Scopes(utils.Paginate(pagination)).Order("created_at DESC").Find(&complaints).Error; err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch complaints", err.Error())
 		return
 	}
@@ -98,8 +116,7 @@ func (h *ComplaintHandler) GetMyComplaints(c *gin.Context) {
 		responses[i] = complaint.ToComplaintResponse()
 	}
 
-	// Build pagination result
-	result := utils.BuildPaginationResult(params.Page, params.PageSize, totalRows, responses)
+	result := utils.BuildPaginationResult(pagination.Page, pagination.PageSize, totalRows, responses)
 	utils.SuccessResponse(c, http.StatusOK, "Complaints retrieved successfully", result)
 }
 
@@ -107,7 +124,16 @@ func (h *ComplaintHandler) GetMyComplaints(c *gin.Context) {
 // GET /api/complaints/:id
 func (h *ComplaintHandler) GetComplaintDetail(c *gin.Context) {
 	complaintID := c.Param("id")
-	userID, _ := c.Get("user_id")
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	userID, ok := userIDRaw.(uint)
+	if !ok {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid user context", nil)
+		return
+	}
 
 	var complaint models.Complaint
 	query := database.DB.Preload("User").

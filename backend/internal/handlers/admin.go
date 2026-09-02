@@ -142,7 +142,16 @@ func (h *AdminHandler) UpdateComplaintStatus(c *gin.Context) {
 // POST /api/admin/complaints/:id/response
 func (h *AdminHandler) AddResponse(c *gin.Context) {
 	complaintID := c.Param("id")
-	adminID, _ := c.Get("user_id")
+	adminIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	adminID, ok := adminIDRaw.(uint)
+	if !ok {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid admin context", nil)
+		return
+	}
 
 	var req models.CreateResponseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -160,7 +169,7 @@ func (h *AdminHandler) AddResponse(c *gin.Context) {
 	// Create response
 	response := models.Response{
 		ComplaintID:  complaint.ID,
-		AdminID:      adminID.(uint),
+		AdminID:      adminID,
 		ResponseText: req.ResponseText,
 	}
 
