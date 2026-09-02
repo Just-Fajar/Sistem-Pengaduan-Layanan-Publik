@@ -40,11 +40,11 @@ func main() {
 	router := gin.Default()
 
 	// Global middleware
+	router.Use(middleware.StructuredLogger())
 	router.Use(middleware.CORSMiddleware())
 	router.Use(middleware.SecurityHeadersMiddleware())
 	router.Use(middleware.GlobalRateLimiter())
 	router.Use(middleware.ErrorHandler())
-	router.Use(middleware.LoggerMiddleware())
 
 	// Setup routes
 	routes.SetupRoutes(router)
