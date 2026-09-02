@@ -16,6 +16,20 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
+func getJWTSecret() string {
+	if config.AppConfig != nil && config.AppConfig.JWT.Secret != "" {
+		return config.AppConfig.JWT.Secret
+	}
+	return "default-secret-key"
+}
+
+func getJWTExpireHours() int {
+	if config.AppConfig != nil && config.AppConfig.JWT.ExpireHours > 0 {
+		return config.AppConfig.JWT.ExpireHours
+	}
+	return 24
+}
+
 // GenerateToken generates JWT token for user
 func GenerateToken(user *models.User) (string, error) {
 	claims := JWTClaims{
@@ -23,13 +37,13 @@ func GenerateToken(user *models.User) (string, error) {
 		Email:  user.Email,
 		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(config.AppConfig.JWT.ExpireHours))),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(getJWTExpireHours()))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(config.AppConfig.JWT.Secret))
+	return token.SignedString([]byte(getJWTSecret()))
 }
 
 // ValidateToken validates JWT token and returns claims
@@ -38,7 +52,7 @@ func ValidateToken(tokenString string) (*JWTClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return []byte(config.AppConfig.JWT.Secret), nil
+		return []byte(getJWTSecret()), nil
 	})
 
 	if err != nil {

@@ -35,6 +35,16 @@ type UserLoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type UpdateProfileRequest struct {
+	Name  string `json:"name" binding:"required,min=3,max=100"`
+	Phone string `json:"phone" binding:"required,min=10,max=20"`
+}
+
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+}
+
 type UserResponse struct {
 	ID        uint      `json:"id"`
 	Name      string    `json:"name"`

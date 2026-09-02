@@ -1,18 +1,20 @@
 package handlers
 
 import (
-	"backend/internal/database"
 	"backend/internal/models"
+	"backend/internal/service"
 	"backend/internal/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type AuthHandler struct{}
+type AuthHandler struct {
+	authService service.AuthService
+}
 
-func NewAuthHandler() *AuthHandler {
-	return &AuthHandler{}
+func NewAuthHandler(authService service.AuthService) *AuthHandler {
+	return &AuthHandler{authService: authService}
 }
 
 // Register handles user registration
@@ -25,42 +27,18 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Check if email already exists
-	var existingUser models.User
-	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Email already registered", nil)
-		return
-	}
-
-	// Create new user
-	user := models.User{
-		Name:  req.Name,
-		Email: req.Email,
-		Phone: req.Phone,
-		Role:  "user", // Default role
-	}
-
-	// Hash password
-	if err := user.HashPassword(req.Password); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to hash password", err.Error())
-		return
-	}
-
-	// Save to database
-	if err := database.DB.Create(&user).Error; err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create user", err.Error())
-		return
-	}
-
-	// Generate token
-	token, err := utils.GenerateToken(&user)
+	user, token, err := h.authService.Register(&req)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to generate token", err.Error())
+		if err.Error() == "Email already registered" {
+			utils.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+			return
+		}
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to register user", err.Error())
 		return
 	}
 
 	utils.SuccessResponse(c, http.StatusCreated, "User registered successfully", gin.H{
-		"user":  user.ToUserResponse(),
+		"user":  user,
 		"token": token,
 	})
 }
@@ -75,28 +53,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Find user by email
-	var user models.User
-	if err := database.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid email or password", nil)
-		return
-	}
-
-	// Check password
-	if err := user.CheckPassword(req.Password); err != nil {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid email or password", nil)
-		return
-	}
-
-	// Generate token
-	token, err := utils.GenerateToken(&user)
+	user, token, err := h.authService.Login(&req)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to generate token", err.Error())
+		utils.ErrorResponse(c, http.StatusUnauthorized, err.Error(), nil)
 		return
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, "Login successful", gin.H{
-		"user":  user.ToUserResponse(),
+		"user":  user,
 		"token": token,
 	})
 }
@@ -115,11 +79,11 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := database.DB.First(&user, userID).Error; err != nil {
-		utils.ErrorResponse(c, http.StatusNotFound, "User not found", err.Error())
+	user, err := h.authService.GetProfile(userID)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Profile retrieved successfully", user.ToUserResponse())
+	utils.SuccessResponse(c, http.StatusOK, "Profile retrieved successfully", user)
 }

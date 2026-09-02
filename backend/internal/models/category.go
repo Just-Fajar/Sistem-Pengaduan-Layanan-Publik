@@ -18,6 +18,16 @@ type Category struct {
 	Complaints []Complaint `gorm:"foreignKey:CategoryID" json:"complaints,omitempty"`
 }
 
+type CreateCategoryRequest struct {
+	Name        string `json:"name" binding:"required,min=3,max=100"`
+	Description string `json:"description"`
+}
+
+type UpdateCategoryRequest struct {
+	Name        string `json:"name" binding:"required,min=3,max=100"`
+	Description string `json:"description"`
+}
+
 type CategoryResponse struct {
 	ID          uint   `json:"id"`
 	Name        string `json:"name"`

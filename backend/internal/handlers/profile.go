@@ -1,28 +1,20 @@
 package handlers
 
 import (
-	"backend/internal/database"
 	"backend/internal/models"
+	"backend/internal/service"
 	"backend/internal/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type ProfileHandler struct{}
-
-func NewProfileHandler() *ProfileHandler {
-	return &ProfileHandler{}
+type ProfileHandler struct {
+	profileService service.ProfileService
 }
 
-type UpdateProfileRequest struct {
-	Name  string `json:"name" binding:"required,min=3,max=100"`
-	Phone string `json:"phone" binding:"required,min=10,max=20"`
-}
-
-type ChangePasswordRequest struct {
-	OldPassword string `json:"old_password" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=6"`
+func NewProfileHandler(profileService service.ProfileService) *ProfileHandler {
+	return &ProfileHandler{profileService: profileService}
 }
 
 // UpdateProfile updates user profile
@@ -39,28 +31,23 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	var req UpdateProfileRequest
+	var req models.UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.ValidationErrorResponse(c, err.Error())
 		return
 	}
 
-	var user models.User
-	if err := database.DB.First(&user, userID).Error; err != nil {
-		utils.ErrorResponse(c, http.StatusNotFound, "User not found", nil)
-		return
-	}
-
-	// Update profile
-	user.Name = req.Name
-	user.Phone = req.Phone
-
-	if err := database.DB.Save(&user).Error; err != nil {
+	user, err := h.profileService.UpdateProfile(userID, &req)
+	if err != nil {
+		if err.Error() == "User not found" {
+			utils.ErrorResponse(c, http.StatusNotFound, "User not found", nil)
+			return
+		}
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update profile", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Profile updated successfully", user.ToUserResponse())
+	utils.SuccessResponse(c, http.StatusOK, "Profile updated successfully", user)
 }
 
 // ChangePassword changes user password
@@ -77,31 +64,21 @@ func (h *ProfileHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	var req ChangePasswordRequest
+	var req models.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.ValidationErrorResponse(c, err.Error())
 		return
 	}
 
-	var user models.User
-	if err := database.DB.First(&user, userID).Error; err != nil {
-		utils.ErrorResponse(c, http.StatusNotFound, "User not found", nil)
-		return
-	}
-
-	// Check old password
-	if err := user.CheckPassword(req.OldPassword); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Old password is incorrect", nil)
-		return
-	}
-
-	// Hash new password
-	if err := user.HashPassword(req.NewPassword); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to hash password", err.Error())
-		return
-	}
-
-	if err := database.DB.Save(&user).Error; err != nil {
+	if err := h.profileService.ChangePassword(userID, &req); err != nil {
+		if err.Error() == "Old password is incorrect" {
+			utils.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+			return
+		}
+		if err.Error() == "User not found" {
+			utils.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
+			return
+		}
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to change password", err.Error())
 		return
 	}
