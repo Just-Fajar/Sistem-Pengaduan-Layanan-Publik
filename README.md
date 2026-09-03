@@ -132,8 +132,9 @@ docker-compose logs -f
 docker-compose down
 ```
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:8080
-- Health Probe: http://localhost:8080/health
+- Backend API (Docker): http://localhost:8088 (atau http://localhost:8080 jika dijalankan manual)
+- Health Probe: http://localhost:8088/health
+- MySQL: localhost:3307
 
 ---
 
