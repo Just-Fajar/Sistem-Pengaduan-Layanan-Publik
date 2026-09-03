@@ -1,31 +1,34 @@
 const StatusBadge = ({ status }) => {
-  const getStatusClass = () => {
-    switch (status) {
-      case 'pending':
-        return 'badge badge-pending';
-      case 'processing':
-        return 'badge badge-processing';
-      case 'completed':
-        return 'badge badge-completed';
-      default:
-        return 'badge bg-gray-100 text-gray-800';
-    }
+  const config = {
+    pending: {
+      badgeClass: 'badge-pending',
+      dotClass: 'dot-pending',
+      label: 'Menunggu',
+    },
+    processing: {
+      badgeClass: 'badge-processing',
+      dotClass: 'dot-processing',
+      label: 'Diproses',
+    },
+    completed: {
+      badgeClass: 'badge-completed',
+      dotClass: 'dot-completed',
+      label: 'Selesai',
+    },
   };
 
-  const getStatusText = () => {
-    switch (status) {
-      case 'pending':
-        return 'Menunggu';
-      case 'processing':
-        return 'Diproses';
-      case 'completed':
-        return 'Selesai';
-      default:
-        return status;
-    }
+  const current = config[status] || {
+    badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
+    dotClass: 'bg-slate-400',
+    label: status || 'Unknown',
   };
 
-  return <span className={getStatusClass()}>{getStatusText()}</span>;
+  return (
+    <span className={`badge ${current.badgeClass}`}>
+      <span className={`dot ${current.dotClass}`} />
+      {current.label}
+    </span>
+  );
 };
 
 export default StatusBadge;

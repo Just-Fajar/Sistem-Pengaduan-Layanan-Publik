@@ -1,13 +1,24 @@
 import { useEffect, useState } from 'react';
-import { FiEye, FiPlus } from 'react-icons/fi';
+import {
+  FiArrowRight,
+  FiCheckCircle,
+  FiClock,
+  FiFileText,
+  FiInbox,
+  FiMessageSquare,
+  FiPlus,
+  FiRefreshCw
+} from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
+import { useAuth } from '../context/AuthContext';
 import api from '../utils/axios';
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -17,7 +28,7 @@ const Dashboard = () => {
     completed: 0,
   });
 
-  const COLORS = ['#FCD34D', '#60A5FA', '#34D399'];
+  const CHART_COLORS = ['#F59E0B', '#6366F1', '#10B981'];
 
   useEffect(() => {
     fetchComplaints();
@@ -30,9 +41,8 @@ const Dashboard = () => {
       const list = Array.isArray(paginationData) ? paginationData : (paginationData?.data || []);
       const total = paginationData?.total_rows ?? list.length;
 
-      setComplaints(list.slice(0, 5)); // Show only 5 recent
+      setComplaints(list.slice(0, 5));
       
-      // Calculate stats
       setStats({
         total: total,
         pending: list.filter(c => c.status === 'pending').length,
@@ -50,12 +60,12 @@ const Dashboard = () => {
     { name: 'Menunggu', value: stats.pending },
     { name: 'Diproses', value: stats.processing },
     { name: 'Selesai', value: stats.completed },
-  ];
+  ].filter(item => item.value > 0);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
       day: 'numeric',
-      month: 'long',
+      month: 'short',
       year: 'numeric',
     });
   };
@@ -63,8 +73,9 @@ const Dashboard = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-600">Loading...</div>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+          <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-medium text-slate-500">Memuat data dashboard...</p>
         </div>
       </Layout>
     );
@@ -72,113 +83,233 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
+      <div className="space-y-8 max-w-7xl mx-auto">
+        {/* Welcome Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/60">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600 mt-1">Kelola pengaduan Anda</p>
+            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
+              Panel Pengguna
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-2 tracking-tight">
+              Halo, {user?.name || 'Warga'} 👋
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Pantau status penanganan aspirasi dan laporan layanan publik Anda secara real-time.
+            </p>
           </div>
-          <Link to="/complaints/create" className="btn btn-primary flex items-center gap-2">
-            <FiPlus /> Buat Pengaduan
-          </Link>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="card bg-blue-50 border-l-4 border-blue-500">
-            <p className="text-sm text-gray-600">Total Pengaduan</p>
-            <p className="text-3xl font-bold text-blue-600">{stats.total}</p>
-          </div>
-          <div className="card bg-yellow-50 border-l-4 border-yellow-500">
-            <p className="text-sm text-gray-600">Menunggu</p>
-            <p className="text-3xl font-bold text-yellow-600">{stats.pending}</p>
-          </div>
-          <div className="card bg-blue-50 border-l-4 border-blue-600">
-            <p className="text-sm text-gray-600">Diproses</p>
-            <p className="text-3xl font-bold text-blue-700">{stats.processing}</p>
-          </div>
-          <div className="card bg-green-50 border-l-4 border-green-500">
-            <p className="text-sm text-gray-600">Selesai</p>
-            <p className="text-3xl font-bold text-green-600">{stats.completed}</p>
+          <div>
+            <Link
+              to="/complaints/create"
+              className="btn btn-primary px-5 py-3 shadow-md shadow-indigo-500/20"
+            >
+              <FiPlus className="w-4 h-4" />
+              <span>Buat Pengaduan Baru</span>
+            </Link>
           </div>
         </div>
 
-        {/* Chart */}
-        {stats.total > 0 && (
-          <div className="card">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Status Pengaduan</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
+        {/* Minimalist Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          {/* Total */}
+          <div className="card card-hover flex items-center justify-between p-5">
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Laporan</p>
+              <p className="text-3xl font-extrabold text-slate-900 mt-1.5">{stats.total}</p>
+              <p className="text-[11px] text-slate-400 mt-1">Aduan tercatat</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center">
+              <FiFileText className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Menunggu */}
+          <div className="card card-hover flex items-center justify-between p-5">
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Menunggu</p>
+              <p className="text-3xl font-extrabold text-amber-600 mt-1.5">{stats.pending}</p>
+              <p className="text-[11px] text-amber-600/80 mt-1">Dalam antrean verifikasi</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <FiClock className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Diproses */}
+          <div className="card card-hover flex items-center justify-between p-5">
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Diproses</p>
+              <p className="text-3xl font-extrabold text-indigo-600 mt-1.5">{stats.processing}</p>
+              <p className="text-[11px] text-indigo-600/80 mt-1">Sedang ditindaklanjuti</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <FiRefreshCw className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Selesai */}
+          <div className="card card-hover flex items-center justify-between p-5">
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Selesai</p>
+              <p className="text-3xl font-extrabold text-emerald-600 mt-1.5">{stats.completed}</p>
+              <p className="text-[11px] text-emerald-600/80 mt-1">Laporan terselesaikan</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <FiCheckCircle className="w-6 h-6" />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Complaints Feed (2 Columns) */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                  Pengaduan Terkini
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Laporan aduan yang baru-baru ini Anda ajukan
+                </p>
+              </div>
+              {stats.total > 0 && (
+                <Link
+                  to="/complaints"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
                 >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Recent Complaints */}
-        <div className="card">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Pengaduan Terbaru</h2>
-          
-          {complaints.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 mb-4">Belum ada pengaduan</p>
-              <Link to="/complaints/create" className="btn btn-primary">
-                Buat Pengaduan Pertama
-              </Link>
+                  Lihat Semua ({stats.total})
+                  <FiArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              {complaints.map((complaint) => (
-                <div key={complaint.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{complaint.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {complaint.category?.name} • {formatDate(complaint.created_at)}
-                      </p>
-                    </div>
-                    <StatusBadge status={complaint.status} />
-                  </div>
-                  <p className="text-gray-700 text-sm line-clamp-2 mb-3">{complaint.description}</p>
-                  {complaint.responses && complaint.responses.length > 0 && (
-                    <p className="text-xs text-green-600 mb-2">
-                      ✓ {complaint.responses.length} Tanggapan dari Admin
-                    </p>
-                  )}
-                  <Link 
-                    to={`/complaints/${complaint.id}`} 
-                    className="text-primary text-sm hover:underline flex items-center gap-1"
-                  >
-                    <FiEye /> Lihat Detail
-                  </Link>
+
+            {complaints.length === 0 ? (
+              <div className="card p-12 text-center bg-white">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4">
+                  <FiInbox className="w-7 h-7" />
                 </div>
-              ))}
-            </div>
-          )}
+                <h3 className="text-base font-bold text-slate-900">Belum Ada Pengaduan</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 mb-6 leading-relaxed">
+                  Anda belum pernah mengajukan pengaduan layanan publik. Sampaikan aspirasi atau keluhan Anda untuk perbaikan fasilitas bersama.
+                </p>
+                <Link to="/complaints/create" className="btn btn-primary text-xs">
+                  <FiPlus className="w-4 h-4" />
+                  Mulai Buat Pengaduan Pertama
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {complaints.map((complaint) => (
+                  <Link
+                    key={complaint.id}
+                    to={`/complaints/${complaint.id}`}
+                    className="card card-hover p-5 block group bg-white"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                            {complaint.category?.name || 'Umum'}
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            • {formatDate(complaint.created_at)}
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                          {complaint.title}
+                        </h3>
+                      </div>
+                      <StatusBadge status={complaint.status} />
+                    </div>
 
-          {stats.total > 5 && (
-            <div className="mt-4 text-center">
-              <Link to="/complaints" className="text-primary hover:underline">
-                Lihat Semua Pengaduan →
-              </Link>
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-3">
+                      {complaint.description}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                      {complaint.responses && complaint.responses.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
+                          <FiMessageSquare className="w-3.5 h-3.5" />
+                          {complaint.responses.length} Tanggapan Resmi
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400">
+                          Belum ada tanggapan petugas
+                        </span>
+                      )}
+
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 group-hover:translate-x-0.5 transition-transform">
+                        Lihat Detail
+                        <FiArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Side Overview / Chart Card (1 Column) */}
+          <div className="space-y-4">
+            <div className="card p-6 bg-white">
+              <h2 className="text-base font-bold text-slate-900 tracking-tight mb-1">
+                Distribusi Status
+              </h2>
+              <p className="text-xs text-slate-500 mb-4">
+                Proporsi penanganan seluruh laporan Anda
+              </p>
+
+              {chartData.length === 0 ? (
+                <div className="h-56 flex flex-col items-center justify-center text-center text-slate-400">
+                  <FiClock className="w-8 h-8 mb-2 opacity-40" />
+                  <p className="text-xs">Data statistik belum tersedia</p>
+                </div>
+              ) : (
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={75}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Information Card */}
+            <div className="card p-5 bg-gradient-to-br from-indigo-50/70 to-slate-50 border-indigo-100">
+              <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-2">
+                Panduan Pengaduan
+              </h3>
+              <ul className="text-xs text-slate-600 space-y-2 leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                  <span>Sertakan deskripsi jelas lokasi dan rincian masalah.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                  <span>Unggah foto pendukung untuk mempercepat proses verifikasi.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                  <span>Petugas akan memberikan update status dan respon tertulis.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </Layout>
