@@ -39,6 +39,11 @@ func Connect(cfg *config.DatabaseConfig) error {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}
 
+	// Seed initial data if tables are empty
+	if err := SeedInitialData(DB); err != nil {
+		log.Printf("⚠️ Warning: failed to seed initial data: %v", err)
+	}
+
 	return nil
 }
 
